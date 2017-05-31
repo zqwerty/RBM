@@ -21,6 +21,9 @@ def load_data(data_dir='../dataset/TRAIN/digits'):
                     label = file.split('-')[1].split('.jpg')[0][:1]
                 else:
                     label = file.split('.jpg')[0][:1]
+            elif '[' in file:
+                # TEST set
+                label = file.split('[')[1][:1]
             else:
                 s = file.split('.png')[0]
                 if '_' in s:
@@ -33,13 +36,13 @@ def load_data(data_dir='../dataset/TRAIN/digits'):
             pic = np.array(Image.open(os.path.join(root, file)), dtype='float64')
             if pic.shape == (32, 32, 3):
                 # /digits, Li Wanjin, number/
-                print file
+                # print file
                 # if not (check_all_True(pic[:, :, 0] == pic[:, :, 1]) and check_all_True(pic[:, :, 2] == pic[:, :, 1])):
                 #     print 'error!'
                 pic = (pic[:, :, 0]+pic[:, :, 1])/2
             elif pic.shape == (32, 32, 4):
                 # /hjk_picture/
-                print file
+                # print file
                 # if not (check_all_True(pic[:, :, 3] == 255*np.ones((32,32,1)))):
                 #     print 'error!'
                 pic = (pic[:, :, 0]+pic[:, :, 1]+pic[:, :, 2])/3
@@ -67,6 +70,15 @@ def check_all_True(nparray):
 
 if __name__ == '__main__':
     np.set_printoptions(threshold=np.NaN)
-    npd = load_data()
-    print npd[0].shape,npd[1].dtype
-    # print npd[0][0,1],npd[1][0]
+    # npd = load_data()
+    # np.savez("data.npz", X=npd[0], y=npd[1])
+    X, y = load_data('../dataset/TRAIN/digits')
+    np.savez("data0.npz", X=X, y=y)
+    X, y = load_data('../dataset/TRAIN/hjk_picture')
+    np.savez("data1.npz", X=X, y=y)
+    X, y = load_data('../dataset/TRAIN/Li Wanjin')
+    np.savez("data2.npz", X=X, y=y)
+    X, y = load_data('../dataset/TRAIN/number')
+    np.savez("data3.npz", X=X, y=y)
+    # X,y = load_data('../dataset/TEST')
+    # np.savez("test.npz", X=X, y=y)

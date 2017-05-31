@@ -11,6 +11,12 @@ Pattern Classification Project
 
 
 
+
+* TEST
+  * `(index)\[(label)\].png`
+
+
+
 * digits:
   * `(label)_(index1).png[_n(index2).png]`
   * e.g. `0_1.png_n1.png`
@@ -40,3 +46,12 @@ read pic from dir
                 y: np.array(dataset_size, 32*32, dtype = int64);
 ```
 
+
+
+## EXP
+
+* sklearn:LR
+  * 100% ???
+* sklearn:RBM+LR
+  * 89% ...
+  * 我能怎么办，我也很无奈啊
