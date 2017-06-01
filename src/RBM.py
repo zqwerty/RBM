@@ -6,6 +6,8 @@ from sklearn.metrics import classification_report
 from sklearn.linear_model import LogisticRegression
 from sklearn.neural_network import BernoulliRBM
 from sklearn.pipeline import Pipeline
+from sklearn import linear_model, datasets, metrics
+from scipy.ndimage import convolve
 import time
 
 
@@ -17,24 +19,38 @@ def scale(X, eps=0.001):
     return X/255
 
 
-def test(X,y):
-    trainX, testX, trainY, testY = train_test_split(X, y, test_size = 0.1, random_state = 42)
-    logistic = LogisticRegression(C=10.0)
+def logistic_regression(trainX, trainY):
+    logistic = LogisticRegression(C=1.0)
     logistic.fit(trainX, trainY)
-    print "LOGISTIC REGRESSION ON ORIGINAL DATASET"
-    print classification_report(testY, logistic.predict(testX))
+    return logistic
 
-    # initialize the RBM + Logistic Regression classifier with
-    # the cross-validated parameters
-    rbm = BernoulliRBM(n_components=200, n_iter=80,
+
+def rbm_lr(trainX, trainY):
+    rbm = BernoulliRBM(n_components=200, n_iter=20,
                        learning_rate=0.001, verbose=True)
-    logistic = LogisticRegression(C=100.0)
+    logistic = LogisticRegression(C=10000.0)
 
     # train the classifier and show an evaluation report
     classifier = Pipeline([("rbm", rbm), ("logistic", logistic)])
     classifier.fit(trainX, trainY)
-    print "RBM + LOGISTIC REGRESSION ON ORIGINAL DATASET"
-    print classification_report(testY, classifier.predict(testX))
+    return classifier
+
+
+def rbm2_lr(trainX,trainY):
+    rbm1 = BernoulliRBM(n_components=500, n_iter=80,
+                       learning_rate=0.001, verbose=True)
+    rbm2 = BernoulliRBM(n_components=200, n_iter=80,
+                       learning_rate=0.001, verbose=True)
+    logistic = LogisticRegression(C=100.0)
+
+    # train the classifier and show an evaluation report
+    classifier = Pipeline([("rbm1", rbm1), ("rbm2", rbm2), ("logistic", logistic)])
+    classifier.fit(trainX, trainY)
+    return classifier
+
+
+def test_model(testX, testY, model):
+    print classification_report(testY, model.predict(testX))
 
 
 def find_hyperparameter(X,y):
@@ -69,10 +85,10 @@ def find_hyperparameter(X,y):
     # C for Logistic Regression
     print "SEARCHING RBM + LOGISTIC REGRESSION"
     params = {
-        "rbm__learning_rate": [0.1, 0.01, 0.001],
-        "rbm__n_iter": [20, 40, 80],
-        "rbm__n_components": [50, 100, 200],
-        "logistic__C": [1.0, 10.0, 100.0]}
+        "rbm__learning_rate": [0.001],
+        "rbm__n_iter": [80],
+        "rbm__n_components": [200],
+        "logistic__C": [100.0,1000,10000]}
 
     # perform a grid search over the parameter
     start = time.time()
@@ -97,24 +113,80 @@ def find_hyperparameter(X,y):
     print "them and re-run this script with --search 0"
 
 
-def test2(trainX,trainY,testX,testY):
-    logistic = LogisticRegression(C=10.0)
-    logistic.fit(trainX, trainY)
-    print "LOGISTIC REGRESSION ON ORIGINAL DATASET"
-    print classification_report(testY, logistic.predict(testX))
+def test_mnist():
+    # Load Data
+    digits = datasets.load_digits()
+    X = np.asarray(digits.data, 'float32')
+    X, Y = nudge_dataset(X, digits.target)
+    X = (X - np.min(X, 0)) / (np.max(X, 0) + 0.0001)  # 0-1 scaling
 
-    # initialize the RBM + Logistic Regression classifier with
-    # the cross-validated parameters
-    rbm = BernoulliRBM(n_components=200, n_iter=80,
-                       learning_rate=0.001, verbose=True)
-    logistic = LogisticRegression(C=100.0)
+    X_train, X_test, Y_train, Y_test = train_test_split(X, Y,
+                                                        test_size=0.2,
+                                                        random_state=0)
+    test_model(X_test,Y_test, logistic_regression(X_train, Y_train))
+    test_model(X_test,Y_test, rbm_lr(X_train,Y_train))
+    # # Models we will use
+    # logistic = linear_model.LogisticRegression()
+    # rbm = BernoulliRBM(random_state=0, verbose=True)
+    #
+    # classifier = Pipeline(steps=[('rbm', rbm), ('logistic', logistic)])
+    # # Hyper-parameters. These were set by cross-validation,
+    # # using a GridSearchCV. Here we are not performing cross-validation to
+    # # save time.
+    # rbm.learning_rate = 0.06
+    # rbm.n_iter = 20
+    # # More components tend to give better prediction performance, but larger
+    # # fitting time
+    # rbm.n_components = 100
+    # logistic.C = 6000.0
+    #
+    # # Training RBM-Logistic Pipeline
+    # classifier.fit(X_train, Y_train)
+    #
+    # # Training Logistic regression
+    # logistic_classifier = linear_model.LogisticRegression(C=100.0)
+    # logistic_classifier.fit(X_train, Y_train)
+    #
+    # print()
+    # print("Logistic regression using RBM features:\n%s\n" % (
+    #     metrics.classification_report(
+    #         Y_test,
+    #         classifier.predict(X_test))))
+    #
+    # print("Logistic regression using raw pixel features:\n%s\n" % (
+    #     metrics.classification_report(
+    #         Y_test,
+    #         logistic_classifier.predict(X_test))))
 
-    # train the classifier and show an evaluation report
-    classifier = Pipeline([("rbm", rbm), ("logistic", logistic)])
-    classifier.fit(trainX, trainY)
-    print "RBM + LOGISTIC REGRESSION ON ORIGINAL DATASET"
-    print classification_report(testY, classifier.predict(testX))
+def nudge_dataset(X, Y):
+    """
+    This produces a dataset 5 times bigger than the original one,
+    by moving the 8x8 images in X around by 1px to left, right, down, up
+    """
+    direction_vectors = [
+        [[0, 1, 0],
+         [0, 0, 0],
+         [0, 0, 0]],
 
+        [[0, 0, 0],
+         [1, 0, 0],
+         [0, 0, 0]],
+
+        [[0, 0, 0],
+         [0, 0, 1],
+         [0, 0, 0]],
+
+        [[0, 0, 0],
+         [0, 0, 0],
+         [0, 1, 0]]]
+
+    shift = lambda x, w: convolve(x.reshape((8, 8)), mode='constant',
+                                  weights=w).ravel()
+    X = np.concatenate([X] +
+                       [np.apply_along_axis(shift, 1, X, vector)
+                        for vector in direction_vectors])
+    Y = np.concatenate([Y for _ in range(5)], axis=0)
+    return X, Y
 
 if __name__ == '__main__':
     np.set_printoptions(threshold=np.NaN)
@@ -125,10 +197,13 @@ if __name__ == '__main__':
         r = np.load(f)
         trainX.append(scale(r['X']))
         trainy.append(r['y'])
-    trainX = np.concatenate((trainX[0],trainX[1],trainX[2],trainX[3]))
-    trainy = np.concatenate((trainy[0], trainy[1], trainy[2], trainy[3]))
+    trainX = np.concatenate((trainX[0], trainX[1], trainX[2], trainX[3]))
+    trainY = np.concatenate((trainy[0], trainy[1], trainy[2], trainy[3]))
     r = np.load("test.npz")
     testX = scale(r['X'])
-    testy = r['y']
-    # find_hyperparameter(X, y)
-    test2(trainX,trainy,testX,testy)
+    testY = r['y']
+    find_hyperparameter(trainX, trainY)
+    # test2(trainX,trainY,testX,testy)
+    # test_model(testX, testY, logistic_regression(trainX, trainY))
+    # test_model(testX, testY, rbm_lr(trainX, trainY))
+    # test_mnist()
