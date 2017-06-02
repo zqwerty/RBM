@@ -4,6 +4,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import classification_report
 from sklearn.linear_model import LogisticRegression
+from sklearn.svm import SVC
 from sklearn.neural_network import BernoulliRBM
 from sklearn.pipeline import Pipeline
 from sklearn import linear_model, datasets, metrics
@@ -20,12 +21,67 @@ def scale(X, eps=0.001):
 
 
 def logistic_regression(trainX, trainY):
+    # find parameter
+    # trainX, testX, trainY, testY = train_test_split(X, y, test_size=0.1, random_state=42)
+    # # perform a grid search on the 'C' parameter of Logistic
+    # # Regression
+    # print "SEARCHING LOGISTIC REGRESSION"
+    # params = {"C": [1.0, 10.0, 100.0]}
+    # start = time.time()
+    # gs = GridSearchCV(LogisticRegression(), params, n_jobs=-1, verbose=1)
+    # gs.fit(trainX, trainY)
+    #
+    # # print diagnostic information to the user and grab the
+    # # best model
+    # print "done in %0.3fs" % (time.time() - start)
+    # print "best score: %0.3f" % (gs.best_score_)
+    # print "LOGISTIC REGRESSION PARAMETERS"
+    # bestParams = gs.best_estimator_.get_params()
+    #
+    # # loop over the parameters and print each of them out
+    # # so they can be manually set
+    # for p in sorted(params.keys()):
+    #     print "\t %s: %f" % (p, bestParams[p])
+
     logistic = LogisticRegression(C=1.0)
     logistic.fit(trainX, trainY)
     return logistic
 
 
 def rbm_lr(trainX, trainY):
+    # find parameter
+    # initialize the RBM + Logistic Regression pipeline
+    # rbm = BernoulliRBM()
+    # logistic = LogisticRegression()
+    # classifier = Pipeline([("rbm", rbm), ("logistic", logistic)])
+    #
+    # # perform a grid search on the learning rate, number of
+    # # iterations, and number of components on the RBM and
+    # # C for Logistic Regression
+    # print "SEARCHING RBM + LOGISTIC REGRESSION"
+    # params = {
+    #     "rbm__learning_rate": [0.001],
+    #     "rbm__n_iter": [80],
+    #     "rbm__n_components": [200],
+    #     "logistic__C": [100.0,1000,10000]}
+    #
+    # # perform a grid search over the parameter
+    # start = time.time()
+    # gs = GridSearchCV(classifier, params, n_jobs=-1, verbose=1)
+    # gs.fit(trainX, trainY)
+    #
+    # # print diagnostic information to the user and grab the
+    # # best model
+    # print "\ndone in %0.3fs" % (time.time() - start)
+    # print "best score: %0.3f" % (gs.best_score_)
+    # print "RBM + LOGISTIC REGRESSION PARAMETERS"
+    # bestParams = gs.best_estimator_.get_params()
+    #
+    # # loop over the parameters and print each of them out
+    # # so they can be manually set
+    # for p in sorted(params.keys()):
+    #     print "\t %s: %f" % (p, bestParams[p])
+
     rbm = BernoulliRBM(n_components=200, n_iter=20,
                        learning_rate=0.001, verbose=True)
     logistic = LogisticRegression(C=10000.0)
@@ -36,15 +92,45 @@ def rbm_lr(trainX, trainY):
     return classifier
 
 
-def rbm2_lr(trainX,trainY):
-    rbm1 = BernoulliRBM(n_components=500, n_iter=80,
-                       learning_rate=0.001, verbose=True)
-    rbm2 = BernoulliRBM(n_components=200, n_iter=80,
-                       learning_rate=0.001, verbose=True)
-    logistic = LogisticRegression(C=100.0)
+def rbm_svc(trainX, trainY):
+    # # find parameter
+    # # initialize the RBM + Logistic Regression pipeline
+    # rbm = BernoulliRBM()
+    # svc = SVC()
+    # classifier = Pipeline([("rbm", rbm), ("svc", svc)])
+    #
+    # # perform a grid search on the learning rate, number of
+    # # iterations, and number of components on the RBM and
+    # # C for Logistic Regression
+    # print "SEARCHING RBM + LOGISTIC REGRESSION"
+    # params = {
+    #     "rbm__learning_rate": [0.001],
+    #     "rbm__n_iter": [20],
+    #     "rbm__n_components": [200],
+    #     "svc__C": [2000.0,5000,10000],
+    #     "svc__kernel": ['linear', 'rbf', 'poly', 'sigmoid']}
+    #
+    # # perform a grid search over the parameter
+    # start = time.time()
+    # gs = GridSearchCV(classifier, params, n_jobs=-1, verbose=1)
+    # gs.fit(trainX, trainY)
+    #
+    # # print diagnostic information to the user and grab the
+    # # best model
+    # print "\ndone in %0.3fs" % (time.time() - start)
+    # print "best score: %0.3f" % (gs.best_score_)
+    # print "RBM + LOGISTIC REGRESSION PARAMETERS"
+    # bestParams = gs.best_estimator_.get_params()
+    #
+    # # loop over the parameters and print each of them out
+    # # so they can be manually set
+    # for p in sorted(params.keys()):
+    #     print "\t %s: %s" % (p, str(bestParams[p]))
 
-    # train the classifier and show an evaluation report
-    classifier = Pipeline([("rbm1", rbm1), ("rbm2", rbm2), ("logistic", logistic)])
+    rbm = BernoulliRBM(n_components=200, n_iter=20,
+                       learning_rate=0.001, verbose=True)
+    svc = SVC(C=2000, kernel='linear')
+    classifier = Pipeline([("rbm", rbm), ("svc", svc)])
     classifier.fit(trainX, trainY)
     return classifier
 
@@ -118,8 +204,8 @@ def test_mnist():
     digits = datasets.load_digits()
     X = np.asarray(digits.data, 'float32')
     X, Y = nudge_dataset(X, digits.target)
-    X = (X - np.min(X, 0)) / (np.max(X, 0) + 0.0001)  # 0-1 scaling
-
+    # X = (X - np.min(X, 0)) / (np.max(X, 0) + 0.0001)  # 0-1 scaling
+    X = scale(X)
     X_train, X_test, Y_train, Y_test = train_test_split(X, Y,
                                                         test_size=0.2,
                                                         random_state=0)
@@ -188,12 +274,12 @@ def nudge_dataset(X, Y):
     Y = np.concatenate([Y for _ in range(5)], axis=0)
     return X, Y
 
-if __name__ == '__main__':
-    np.set_printoptions(threshold=np.NaN)
+
+def load_all():
     trainX = []
     trainy = []
     for i in range(4):
-        f = 'data'+str(i)+'.npz'
+        f = 'data' + str(i) + '.npz'
         r = np.load(f)
         trainX.append(scale(r['X']))
         trainy.append(r['y'])
@@ -202,8 +288,14 @@ if __name__ == '__main__':
     r = np.load("test.npz")
     testX = scale(r['X'])
     testY = r['y']
-    find_hyperparameter(trainX, trainY)
+    return trainX, trainY, testX, testY
+
+if __name__ == '__main__':
+    np.set_printoptions(threshold=np.NaN)
+    trainX, trainY, testX, testY = load_all()
+    # find_hyperparameter(trainX, trainY)
     # test2(trainX,trainY,testX,testy)
-    # test_model(testX, testY, logistic_regression(trainX, trainY))
+    test_model(testX, testY, logistic_regression(trainX, trainY))
     # test_model(testX, testY, rbm_lr(trainX, trainY))
+    # test_model(testX, testY, rbm_svc(trainX, trainY))
     # test_mnist()

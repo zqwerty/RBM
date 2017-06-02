@@ -151,3 +151,4 @@ ENV/
 
 # mypy
 .mypy_cache/
+mnist.pkl.gz
