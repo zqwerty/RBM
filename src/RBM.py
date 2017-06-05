@@ -5,7 +5,7 @@ from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import classification_report
 from sklearn.linear_model import LogisticRegression
 from sklearn.svm import SVC
-from sklearn.neural_network import BernoulliRBM
+from sklearn.neural_network import BernoulliRBM, MLPClassifier
 from sklearn.pipeline import Pipeline
 from sklearn import linear_model, datasets, metrics
 from scipy.ndimage import convolve
@@ -45,12 +45,13 @@ def logistic_regression(trainX, trainY):
 
     logistic = LogisticRegression(C=1.0)
     logistic.fit(trainX, trainY)
+    print logistic.n_iter_
     return logistic
 
 
 def rbm_lr(trainX, trainY):
-    # find parameter
-    # initialize the RBM + Logistic Regression pipeline
+    # # find parameter
+    # # initialize the RBM + Logistic Regression pipeline
     # rbm = BernoulliRBM()
     # logistic = LogisticRegression()
     # classifier = Pipeline([("rbm", rbm), ("logistic", logistic)])
@@ -61,9 +62,9 @@ def rbm_lr(trainX, trainY):
     # print "SEARCHING RBM + LOGISTIC REGRESSION"
     # params = {
     #     "rbm__learning_rate": [0.001],
-    #     "rbm__n_iter": [80],
-    #     "rbm__n_components": [200],
-    #     "logistic__C": [100.0,1000,10000]}
+    #     "rbm__n_iter": [20, 80],
+    #     "rbm__n_components": [100],
+    #     "logistic__C": [100000, 1000000]}
     #
     # # perform a grid search over the parameter
     # start = time.time()
@@ -81,14 +82,17 @@ def rbm_lr(trainX, trainY):
     # # so they can be manually set
     # for p in sorted(params.keys()):
     #     print "\t %s: %f" % (p, bestParams[p])
-
+    #
     rbm = BernoulliRBM(n_components=200, n_iter=20,
                        learning_rate=0.001, verbose=True)
-    logistic = LogisticRegression(C=10000.0)
+    logistic = LogisticRegression(C=100000.0)
 
     # train the classifier and show an evaluation report
     classifier = Pipeline([("rbm", rbm), ("logistic", logistic)])
     classifier.fit(trainX, trainY)
+    print logistic.n_iter_
+    # print rbm.components_.shape
+    # print rbm.fit_transform(trainX)[:10]
     return classifier
 
 
@@ -131,6 +135,116 @@ def rbm_svc(trainX, trainY):
                        learning_rate=0.001, verbose=True)
     svc = SVC(C=2000, kernel='linear')
     classifier = Pipeline([("rbm", rbm), ("svc", svc)])
+    classifier.fit(trainX, trainY)
+    return classifier
+
+
+def mlp(trainX, trainY):
+    mlp = MLPClassifier(hidden_layer_sizes=(200,), max_iter=10000, alpha=1e-4,
+                        solver='sgd', verbose=True, tol=1e-4, random_state=1,
+                        learning_rate_init=.001)
+    mlp.fit(trainX, trainY)
+    print("Training set score: %f" % mlp.score(trainX, trainY))
+    print("Test set score: %f" % mlp.score(testX, testY))
+    # print mlp.coefs_[0].shape
+    # print mlp.intercepts_[0].shape
+    return mlp
+
+
+def rbm_mlp(trainX, trainY):
+    rbm = BernoulliRBM(n_components=200, n_iter=20,
+                       learning_rate=0.001, verbose=True)
+    rbm.fit(trainX, trainY)
+    W = np.transpose(rbm.components_)
+    b = rbm.intercept_hidden_
+    mlp = MLPClassifier(hidden_layer_sizes=(200,), max_iter=10000, alpha=1e-4,
+                        solver='sgd', verbose=True, tol=1e-4, random_state=1,
+                        learning_rate_init=.001)
+    mlp.fit(trainX[:1], trainY[:1])
+    mlp.coefs_[0] = W #np.zeros((1024,200),dtype='float64')
+    mlp.intercepts_[0] = b
+    mlp.fit(trainX, trainY)
+    return mlp
+
+
+# class dbm
+
+def dbm(trainX, trainY):
+    rbm1 = BernoulliRBM(n_components=200, n_iter=20,
+                        learning_rate=0.001, verbose=True)
+    X_new = rbm1.fit_transform(trainX)
+    print X_new[:10]
+    # print X_new.shape
+    rbm2 = BernoulliRBM(n_components=50, n_iter=200,
+                        learning_rate=0.01, verbose=True)
+    # pred_Y = rbm2.fit_transform(X_new)
+    pred_Y = rbm2.fit_transform(X_new)
+    # rbm2.fit(trainX)
+    # W =
+    print pred_Y[:10]
+    rbm3 = BernoulliRBM(n_components=10, n_iter=200,
+                        learning_rate=0.01, verbose=True)
+    pred_Y = rbm2.fit_transform(X_new)
+    print pred_Y[:10]
+    # print pred_Y.shape, trainY.shape
+    # for i in range(trainY.shape[0]):
+    #     pred_y = list(pred_Y[i]).index(max(pred_Y[i]))
+        # print pred_Y[i]
+        # print pred_y, trainY[i]
+
+
+    logistic = LogisticRegression(C=1.0)
+    logistic.fit(pred_Y, trainY)
+    print logistic.n_iter_
+    return logistic
+
+
+def dbm2(trainX, trainY, hidden_layer=(600, 200)):
+    # # find parameter
+    # # initialize the RBM + Logistic Regression pipeline
+    # pipe = []
+    # for i in range(len(hidden_layer)):
+    #     rbm = BernoulliRBM(n_components=hidden_layer[i], n_iter=20,
+    #                        learning_rate=0.001, verbose=True)
+    #     pipe.append(("rbm" + str(i), rbm))
+    # logistic = LogisticRegression()
+    # # logistic = SVC(C=2000, kernel='linear')
+    # pipe.append(("logistic", logistic))
+    # classifier = Pipeline(pipe)
+    #
+    # # perform a grid search on the learning rate, number of
+    # # iterations, and number of components on the RBM and
+    # # C for Logistic Regression
+    # print "SEARCHING RBM + LOGISTIC REGRESSION"
+    # params = {
+    #     "logistic__C": [100000000, 1000000000]}
+    #
+    # # perform a grid search over the parameter
+    # start = time.time()
+    # gs = GridSearchCV(classifier, params, n_jobs=-1, verbose=1)
+    # gs.fit(trainX, trainY)
+    #
+    # # print diagnostic information to the user and grab the
+    # # best model
+    # print "\ndone in %0.3fs" % (time.time() - start)
+    # print "best score: %0.3f" % (gs.best_score_)
+    # print "RBM + LOGISTIC REGRESSION PARAMETERS"
+    # bestParams = gs.best_estimator_.get_params()
+    #
+    # # loop over the parameters and print each of them out
+    # # so they can be manually set
+    # for p in sorted(params.keys()):
+    #     print "\t %s: %f" % (p, bestParams[p])
+
+    pipe = []
+    for i in range(len(hidden_layer)):
+        rbm = BernoulliRBM(n_components=hidden_layer[i], n_iter=20,
+                       learning_rate=0.001, verbose=True)
+        pipe.append(("rbm"+str(i), rbm))
+    logistic = LogisticRegression(C=100000000.0)
+    # logistic = SVC(C=2000, kernel='linear')
+    pipe.append(("logistic", logistic))
+    classifier = Pipeline(pipe)
     classifier.fit(trainX, trainY)
     return classifier
 
@@ -295,7 +409,11 @@ if __name__ == '__main__':
     trainX, trainY, testX, testY = load_all()
     # find_hyperparameter(trainX, trainY)
     # test2(trainX,trainY,testX,testy)
-    test_model(testX, testY, logistic_regression(trainX, trainY))
+    # test_model(testX, testY, logistic_regression(trainX, trainY))
     # test_model(testX, testY, rbm_lr(trainX, trainY))
     # test_model(testX, testY, rbm_svc(trainX, trainY))
+    # test_model(testX, testY, mlp(trainX, trainY))
+    # test_model(testX, testY, rbm_mlp(trainX, trainY))
+    # dbm(trainX, trainY)
+    test_model(testX, testY, dbm2(trainX, trainY))
     # test_mnist()
