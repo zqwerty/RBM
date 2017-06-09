@@ -9,11 +9,11 @@ def load_data(data_dir='../dataset/TRAIN/digits'):
     read pic from dir
     :param data_dir
     :return: (X,y) X: np.array(dataset_size, 32*32, dtype = float64);
-                    y: np.array(dataset_size, 32*32, dtype = int64);
+                    y: np.array(dataset_size, , dtype = int64);
     '''
     data = []
     labels = []
-    f = open('analyse.txt', 'wb')
+    # f = open('analyse.txt', 'wb')
     for root, dirs, files in os.walk(data_dir):
         for file in files:
             if '.jpg' in file:
@@ -55,30 +55,22 @@ def load_data(data_dir='../dataset/TRAIN/digits'):
                 print file, pic.shape
             pic = pic.reshape(32 * 32, )
             data.append(pic)
-            f.write(file+':'+label+'\n'+str(pic)+'\n')
-    f.close()
+            # f.write(file+':'+label+'\n'+str(pic)+'\n')
+    # f.close()
     return np.array(data), np.array(labels)
 
 
-def check_all_True(nparray):
-    flag = True
-    for ele in nparray.flat:
-        if ele == False:
-            flag = False
-            break
-    return flag
-
 if __name__ == '__main__':
-    np.set_printoptions(threshold=np.NaN)
+    # np.set_printoptions(threshold=np.NaN)
     # npd = load_data()
     # np.savez("data.npz", X=npd[0], y=npd[1])
     X, y = load_data('../dataset/TRAIN/digits')
-    np.savez("data0.npz", X=X, y=y)
+    np.savez("../dataset/data0.npz", X=X, y=y)
     X, y = load_data('../dataset/TRAIN/hjk_picture')
-    np.savez("data1.npz", X=X, y=y)
+    np.savez("../dataset/data1.npz", X=X, y=y)
     X, y = load_data('../dataset/TRAIN/Li Wanjin')
-    np.savez("data2.npz", X=X, y=y)
+    np.savez("../dataset/data2.npz", X=X, y=y)
     X, y = load_data('../dataset/TRAIN/number')
-    np.savez("data3.npz", X=X, y=y)
-    # X,y = load_data('../dataset/TEST')
-    # np.savez("test.npz", X=X, y=y)
+    np.savez("../dataset/data3.npz", X=X, y=y)
+    X, y = load_data('../dataset/TEST')
+    np.savez("../dataset/test.npz", X=X, y=y)
